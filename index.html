@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OrbitForge v0.7</title>
+<title>OrbitForge v0.8</title>
 
 <style>
 html,body{
@@ -18,8 +18,6 @@ html,body{
 
 canvas{
   display:block;
-  width:100%;
-  height:100%;
 }
 
 #ui{
@@ -28,12 +26,12 @@ canvas{
   left:12px;
   top:12px;
   width:calc(100% - 24px);
-  max-width:390px;
+  max-width:410px;
   max-height:calc(100vh - 24px);
   overflow-y:auto;
   padding:15px;
   box-sizing:border-box;
-  background:rgba(7,16,33,.91);
+  background:rgba(7,16,33,.92);
   border:1px solid #38507c;
   border-radius:18px;
   backdrop-filter:blur(8px);
@@ -59,26 +57,6 @@ button{
   background:#315fcb;
   color:white;
   font-size:15px;
-  cursor:pointer;
-}
-
-button:active{
-  transform:scale(.98);
-}
-
-#status{
-  margin-top:12px;
-  padding:10px;
-  border-radius:10px;
-  background:#091126;
-  border:1px solid #22345b;
-  font-size:13px;
-}
-
-#controls{
-  margin-top:12px;
-  padding-top:10px;
-  border-top:1px solid #22345b;
 }
 
 .control{
@@ -97,6 +75,28 @@ button:active{
   margin-top:6px;
 }
 
+.section{
+  margin-top:15px;
+  padding-top:12px;
+  border-top:1px solid #22345b;
+  font-weight:bold;
+  letter-spacing:1px;
+}
+
+#status{
+  margin-top:12px;
+  padding:10px;
+  border-radius:10px;
+  background:#091126;
+  border:1px solid #22345b;
+  font-size:12px;
+  line-height:1.6;
+}
+
+.value{
+  color:#8db5ff;
+}
+
 #hint{
   margin-top:12px;
   color:#7f8da8;
@@ -113,7 +113,7 @@ button:active{
 <h1>ORBITFORGE</h1>
 
 <div class="sub">
-Planetary Simulation Laboratory · v0.7
+Planetary Simulation Laboratory · v0.8
 </div>
 
 <button id="start">▶ START</button>
@@ -122,36 +122,113 @@ Planetary Simulation Laboratory · v0.7
 
 <div id="status">
 Status: <b>READY</b><br>
-Planet X: 5 AU<br>
-Simulation: PAUSED
+Simulation: PAUSED<br>
+Time: 0 days<br>
+Orbital Period: 11.18 years
 </div>
 
-<div id="controls">
+<div class="section">
+ORBITAL PARAMETERS
+</div>
 
 <div class="control">
 <label>
-<span>Simulation Speed</span>
-<span id="speedValue">1×</span>
+<span>Star Mass</span>
+<span class="value" id="starMassValue">1.00 M☉</span>
 </label>
 
-<input id="speed"
+<input id="starMass"
 type="range"
 min="0.1"
 max="5"
-step="0.1"
+step="0.01"
 value="1">
 </div>
 
 <div class="control">
 <label>
+<span>Semi-major Axis</span>
+<span class="value" id="axisValue">5.00 AU</span>
+</label>
+
+<input id="axis"
+type="range"
+min="0.2"
+max="20"
+step="0.1"
+value="5">
+</div>
+
+<div class="control">
+<label>
+<span>Eccentricity</span>
+<span class="value" id="eccValue">0.000</span>
+</label>
+
+<input id="ecc"
+type="range"
+min="0"
+max="0.9"
+step="0.001"
+value="0">
+</div>
+
+<div class="control">
+<label>
+<span>Inclination</span>
+<span class="value" id="incValue">0°</span>
+</label>
+
+<input id="inc"
+type="range"
+min="0"
+max="90"
+step="1"
+value="0">
+</div>
+
+<div class="control">
+<label>
+<span>Planet Mass</span>
+<span class="value" id="planetMassValue">1 M⊕</span>
+</label>
+
+<input id="planetMass"
+type="range"
+min="0.1"
+max="100"
+step="0.1"
+value="1">
+</div>
+
+<div class="section">
+SIMULATION
+</div>
+
+<div class="control">
+<label>
+<span>Time Acceleration</span>
+<span class="value" id="timeValue">30 days/s</span>
+</label>
+
+<input id="timeSpeed"
+type="range"
+min="1"
+max="365"
+step="1"
+value="30">
+</div>
+
+<div class="control">
+<label>
 <span>Camera Distance</span>
-<span id="cameraValue">24</span>
+<span class="value" id="cameraValue">24</span>
 </label>
 
 <input id="cameraDistance"
 type="range"
-min="14"
-max="50"
+min="10"
+max="60"
 step="1"
 value="24">
 </div>
@@ -159,7 +236,7 @@ value="24">
 <div class="control">
 <label>
 <span>Planet Size</span>
-<span id="planetValue">1×</span>
+<span class="value" id="planetSizeValue">1×</span>
 </label>
 
 <input id="planetSize"
@@ -168,8 +245,6 @@ min="0.5"
 max="3"
 step="0.1"
 value="1">
-</div>
-
 </div>
 
 <div id="hint">
@@ -186,18 +261,21 @@ let scene;
 let camera;
 let renderer;
 
-let planet;
 let star;
+let planet;
 let orbitLine;
 
 let running=false;
-let angle=0;
+let simulationDays=0;
+
+let cameraAngle=0;
+let cameraElevation=.55;
 
 let mediaRecorder=null;
 let recordedChunks=[];
 
-let cameraAngle=0;
-let cameraElevation=0.55;
+
+/* CONTROLS */
 
 const start=document.getElementById("start");
 const reset=document.getElementById("reset");
@@ -205,35 +283,56 @@ const record=document.getElementById("record");
 
 const status=document.getElementById("status");
 
-const speed=document.getElementById("speed");
-const speedValue=document.getElementById("speedValue");
+const starMass=document.getElementById("starMass");
+const axis=document.getElementById("axis");
+const ecc=document.getElementById("ecc");
+const inc=document.getElementById("inc");
+const planetMass=document.getElementById("planetMass");
 
+const timeSpeed=document.getElementById("timeSpeed");
 const cameraDistance=document.getElementById("cameraDistance");
-const cameraValue=document.getElementById("cameraValue");
-
 const planetSize=document.getElementById("planetSize");
-const planetValue=document.getElementById("planetValue");
 
+const starMassValue=document.getElementById("starMassValue");
+const axisValue=document.getElementById("axisValue");
+const eccValue=document.getElementById("eccValue");
+const incValue=document.getElementById("incValue");
+const planetMassValue=document.getElementById("planetMassValue");
+
+const timeValue=document.getElementById("timeValue");
+const cameraValue=document.getElementById("cameraValue");
+const planetSizeValue=document.getElementById("planetSizeValue");
+
+
+/* SCALE */
+
+const AU_SCALE=1.2;
+
+
+/* INITIALIZATION */
 
 function init(){
 
     scene=new THREE.Scene();
 
-    scene.background=new THREE.Color(0x000005);
+    scene.background=
+        new THREE.Color(0x000005);
 
 
-    camera=new THREE.PerspectiveCamera(
-        55,
-        window.innerWidth/window.innerHeight,
-        0.1,
-        1000
-    );
+    camera=
+        new THREE.PerspectiveCamera(
+            55,
+            window.innerWidth/window.innerHeight,
+            .1,
+            1000
+        );
 
 
-    renderer=new THREE.WebGLRenderer({
-        antialias:true,
-        preserveDrawingBuffer:true
-    });
+    renderer=
+        new THREE.WebGLRenderer({
+            antialias:true,
+            preserveDrawingBuffer:true
+        });
 
 
     renderer.setPixelRatio(
@@ -252,7 +351,7 @@ function init(){
     );
 
 
-    // SUN
+    /* STAR */
 
     const starGeometry=
         new THREE.SphereGeometry(
@@ -268,33 +367,32 @@ function init(){
         });
 
 
-    star=new THREE.Mesh(
-        starGeometry,
-        starMaterial
-    );
+    star=
+        new THREE.Mesh(
+            starGeometry,
+            starMaterial
+        );
 
 
     scene.add(star);
 
 
-    // SUN LIGHT
-
     const light=
         new THREE.PointLight(
             0xffffff,
             3,
-            100
+            200
         );
 
 
     scene.add(light);
 
 
-    // PLANET
+    /* PLANET */
 
     const planetGeometry=
         new THREE.SphereGeometry(
-            0.65,
+            .65,
             32,
             32
         );
@@ -303,66 +401,41 @@ function init(){
     const planetMaterial=
         new THREE.MeshStandardMaterial({
             color:0x3388ff,
-            roughness:.7,
-            metalness:.05
+            roughness:.7
         });
 
 
-    planet=new THREE.Mesh(
-        planetGeometry,
-        planetMaterial
-    );
+    planet=
+        new THREE.Mesh(
+            planetGeometry,
+            planetMaterial
+        );
 
 
     scene.add(planet);
 
 
-    // ORBIT
+    createStarField();
 
-    const radius=6;
+    createOrbit();
 
-    const points=[];
+    setupCameraControls();
 
-
-    for(let i=0;i<=256;i++){
-
-        const a=
-            (i/256)*Math.PI*2;
-
-
-        points.push(
-            new THREE.Vector3(
-                Math.cos(a)*radius,
-                0,
-                Math.sin(a)*radius
-            )
-        );
-
-    }
+    window.addEventListener(
+        "resize",
+        resize
+    );
 
 
-    const orbitGeometry=
-        new THREE.BufferGeometry()
-        .setFromPoints(points);
+    updateValues();
+
+    animate();
+}
 
 
-    const orbitMaterial=
-        new THREE.LineBasicMaterial({
-            color:0x3366ff
-        });
+/* STAR FIELD */
 
-
-    orbitLine=
-        new THREE.LineLoop(
-            orbitGeometry,
-            orbitMaterial
-        );
-
-
-    scene.add(orbitLine);
-
-
-    // STAR FIELD
+function createStarField(){
 
     const positions=[];
 
@@ -378,11 +451,11 @@ function init(){
     }
 
 
-    const starFieldGeometry=
+    const geometry=
         new THREE.BufferGeometry();
 
 
-    starFieldGeometry.setAttribute(
+    geometry.setAttribute(
         "position",
         new THREE.Float32BufferAttribute(
             positions,
@@ -391,48 +464,236 @@ function init(){
     );
 
 
-    const starFieldMaterial=
+    const material=
         new THREE.PointsMaterial({
             color:0xffffff,
             size:.14
         });
 
 
-    const starField=
+    scene.add(
         new THREE.Points(
-            starFieldGeometry,
-            starFieldMaterial
+            geometry,
+            material
+        )
+    );
+}
+
+
+/* KEPLER EQUATION */
+
+function solveKepler(M,e){
+
+    let E=M;
+
+    for(let i=0;i<12;i++){
+
+        E=
+            E-
+            (E-e*Math.sin(E)-M)/
+            (1-e*Math.cos(E));
+
+    }
+
+    return E;
+}
+
+
+/* ORBITAL PERIOD */
+
+function getPeriodYears(){
+
+    const a=
+        Number(axis.value);
+
+    const mass=
+        Number(starMass.value);
+
+    return Math.sqrt(
+        (a*a*a)/mass
+    );
+}
+
+
+/* CREATE ORBIT */
+
+function createOrbit(){
+
+    if(orbitLine){
+
+        scene.remove(orbitLine);
+
+    }
+
+
+    const a=
+        Number(axis.value);
+
+
+    const e=
+        Number(ecc.value);
+
+
+    const b=
+        a*Math.sqrt(1-e*e);
+
+
+    const points=[];
+
+
+    for(let i=0;i<=360;i++){
+
+        const theta=
+            (i/360)*Math.PI*2;
+
+
+        const r=
+            a*(1-e*e)/
+            (1+e*Math.cos(theta));
+
+
+        let x=
+            r*Math.cos(theta);
+
+
+        let z=
+            r*Math.sin(theta);
+
+
+        const inclination=
+            THREE.MathUtils.degToRad(
+                Number(inc.value)
+            );
+
+
+        const y=
+            z*Math.sin(inclination);
+
+
+        z=
+            z*Math.cos(inclination);
+
+
+        points.push(
+            new THREE.Vector3(
+                x*AU_SCALE,
+                y*AU_SCALE,
+                z*AU_SCALE
+            )
+        );
+
+    }
+
+
+    const geometry=
+        new THREE.BufferGeometry()
+        .setFromPoints(points);
+
+
+    const material=
+        new THREE.LineBasicMaterial({
+            color:0x3366ff
+        });
+
+
+    orbitLine=
+        new THREE.LineLoop(
+            geometry,
+            material
         );
 
 
-    scene.add(starField);
-
-
-    window.addEventListener(
-        "resize",
-        resize
-    );
-
-
-    setupCameraControls();
-
-    animate();
+    scene.add(orbitLine);
 }
 
+
+/* UPDATE PLANET POSITION */
+
+function updatePlanet(){
+
+    const a=
+        Number(axis.value);
+
+    const e=
+        Number(ecc.value);
+
+    const inclination=
+        THREE.MathUtils.degToRad(
+            Number(inc.value)
+        );
+
+
+    const periodYears=
+        getPeriodYears();
+
+
+    const periodDays=
+        periodYears*365.25;
+
+
+    let M=
+        (
+            simulationDays/
+            periodDays
+        )*
+        Math.PI*2;
+
+
+    M=
+        M%(Math.PI*2);
+
+
+    const E=
+        solveKepler(M,e);
+
+
+    const x=
+        a*
+        (Math.cos(E)-e);
+
+
+    const z=
+        a*
+        Math.sqrt(1-e*e)*
+        Math.sin(E);
+
+
+    const y=
+        z*Math.sin(inclination);
+
+
+    const finalZ=
+        z*Math.cos(inclination);
+
+
+    planet.position.set(
+        x*AU_SCALE,
+        y*AU_SCALE,
+        finalZ*AU_SCALE
+    );
+}
+
+
+/* CAMERA */
 
 function updateCamera(){
 
     const distance=
         Number(cameraDistance.value);
 
+
     const horizontal=
-        distance*Math.cos(cameraElevation);
+        distance*Math.cos(
+            cameraElevation
+        );
+
 
     camera.position.set(
         Math.sin(cameraAngle)*horizontal,
         distance*Math.sin(cameraElevation),
         Math.cos(cameraAngle)*horizontal
     );
+
 
     camera.lookAt(
         0,
@@ -442,24 +703,27 @@ function updateCamera(){
 }
 
 
+/* CAMERA DRAG */
+
 function setupCameraControls(){
 
     let dragging=false;
+
     let lastX=0;
     let lastY=0;
 
 
     renderer.domElement.addEventListener(
         "pointerdown",
-        function(event){
+        function(e){
 
             dragging=true;
 
-            lastX=event.clientX;
-            lastY=event.clientY;
+            lastX=e.clientX;
+            lastY=e.clientY;
 
             renderer.domElement.setPointerCapture(
-                event.pointerId
+                e.pointerId
             );
 
         }
@@ -468,25 +732,27 @@ function setupCameraControls(){
 
     renderer.domElement.addEventListener(
         "pointermove",
-        function(event){
+        function(e){
 
             if(!dragging)return;
 
+
             const dx=
-                event.clientX-lastX;
+                e.clientX-lastX;
+
 
             const dy=
-                event.clientY-lastY;
+                e.clientY-lastY;
 
 
-            cameraAngle-=dx*0.008;
+            cameraAngle-=dx*.008;
 
-            cameraElevation+=dy*0.008;
+            cameraElevation+=dy*.008;
 
 
             cameraElevation=
                 Math.max(
-                    0.15,
+                    .15,
                     Math.min(
                         1.35,
                         cameraElevation
@@ -494,8 +760,8 @@ function setupCameraControls(){
                 );
 
 
-            lastX=event.clientX;
-            lastY=event.clientY;
+            lastX=e.clientX;
+            lastY=e.clientY;
 
         }
     );
@@ -509,9 +775,10 @@ function setupCameraControls(){
 
         }
     );
-
 }
 
+
+/* ANIMATION */
 
 function animate(){
 
@@ -522,25 +789,17 @@ function animate(){
 
     if(running){
 
-        angle+=
-            0.008*
-            Number(speed.value);
+        const daysPerSecond=
+            Number(timeSpeed.value);
+
+
+        simulationDays+=
+            daysPerSecond/60;
 
     }
 
 
-    const radius=6;
-
-
-    planet.position.x=
-        Math.cos(angle)*radius;
-
-
-    planet.position.z=
-        Math.sin(angle)*radius;
-
-
-    planet.rotation.y+=0.02;
+    updatePlanet();
 
 
     const size=
@@ -554,7 +813,7 @@ function animate(){
     );
 
 
-    star.rotation.y+=0.001;
+    star.rotation.y+=.001;
 
 
     updateCamera();
@@ -565,119 +824,119 @@ function animate(){
         camera
     );
 
+
+    updateStatus();
 }
 
 
-function resize(){
+/* STATUS */
 
-    camera.aspect=
-        window.innerWidth/
-        window.innerHeight;
+function updateStatus(){
 
-
-    camera.updateProjectionMatrix();
+    const years=
+        getPeriodYears();
 
 
-    renderer.setSize(
-        window.innerWidth,
-        window.innerHeight
-    );
+    status.innerHTML=
+        "Status: <b>"+
+        (running?"RUNNING":"PAUSED")+
+        "</b><br>"+
+        "Simulation: "+
+        simulationDays.toFixed(1)+
+        " days<br>"+
+        "Orbital Period: "+
+        years.toFixed(2)+
+        " years<br>"+
+        "Semi-major Axis: "+
+        Number(axis.value).toFixed(2)+
+        " AU<br>"+
+        "Eccentricity: "+
+        Number(ecc.value).toFixed(3);
 
 }
 
 
-/* START / PAUSE */
-
-start.addEventListener(
-    "click",
-    function(){
-
-        running=!running;
-
-
-        if(running){
-
-            start.textContent=
-                "⏸ PAUSE";
-
-
-            status.innerHTML=
-                "Status: <b>RUNNING</b><br>"+
-                "Planet X: 5 AU<br>"+
-                "Simulation: ACTIVE";
-
-        }else{
-
-            start.textContent=
-                "▶ START";
-
-
-            status.innerHTML=
-                "Status: <b>PAUSED</b><br>"+
-                "Planet X: 5 AU<br>"+
-                "Simulation: PAUSED";
-
-        }
-
-    }
-);
-
-
-/* RESET */
-
-reset.addEventListener(
-    "click",
-    function(){
-
-        running=false;
-
-        angle=0;
-
-        cameraAngle=0;
-
-        cameraElevation=0.55;
-
-        speed.value=1;
-
-        cameraDistance.value=24;
-
-        planetSize.value=1;
-
-
-        start.textContent=
-            "▶ START";
-
-
-        status.innerHTML=
-            "Status: <b>READY</b><br>"+
-            "Planet X: 5 AU<br>"+
-            "Simulation: RESET";
-
-        updateValues();
-
-    }
-);
-
-
-/* SETTINGS */
+/* UI VALUES */
 
 function updateValues(){
 
-    speedValue.textContent=
-        Number(speed.value).toFixed(1)+"×";
+    starMassValue.textContent=
+        Number(starMass.value).toFixed(2)+
+        " M☉";
+
+
+    axisValue.textContent=
+        Number(axis.value).toFixed(2)+
+        " AU";
+
+
+    eccValue.textContent=
+        Number(ecc.value).toFixed(3);
+
+
+    incValue.textContent=
+        Number(inc.value)+
+        "°";
+
+
+    planetMassValue.textContent=
+        Number(planetMass.value)+
+        " M⊕";
+
+
+    timeValue.textContent=
+        Number(timeSpeed.value)+
+        " days/s";
 
 
     cameraValue.textContent=
         cameraDistance.value;
 
 
-    planetValue.textContent=
-        Number(planetSize.value).toFixed(1)+"×";
+    planetSizeValue.textContent=
+        Number(planetSize.value).toFixed(1)+
+        "×";
 
+
+    createOrbit();
+
+    updatePlanet();
 }
 
 
-speed.addEventListener(
+/* PARAMETER EVENTS */
+
+starMass.addEventListener(
+    "input",
+    updateValues
+);
+
+
+axis.addEventListener(
+    "input",
+    updateValues
+);
+
+
+ecc.addEventListener(
+    "input",
+    updateValues
+);
+
+
+inc.addEventListener(
+    "input",
+    updateValues
+);
+
+
+planetMass.addEventListener(
+    "input",
+    updateValues
+);
+
+
+timeSpeed.addEventListener(
     "input",
     updateValues
 );
@@ -695,7 +954,48 @@ planetSize.addEventListener(
 );
 
 
-/* VIDEO RECORDING */
+/* START */
+
+start.addEventListener(
+    "click",
+    function(){
+
+        running=!running;
+
+
+        start.textContent=
+            running?
+            "⏸ PAUSE":
+            "▶ START";
+
+    }
+);
+
+
+/* RESET */
+
+reset.addEventListener(
+    "click",
+    function(){
+
+        running=false;
+
+        simulationDays=0;
+
+        cameraAngle=0;
+
+        cameraElevation=.55;
+
+        start.textContent=
+            "▶ START";
+
+        updatePlanet();
+
+    }
+);
+
+
+/* VIDEO */
 
 record.addEventListener(
     "click",
@@ -704,7 +1004,7 @@ record.addEventListener(
         if(!window.MediaRecorder){
 
             alert(
-                "Video recording is not supported by this browser."
+                "Video recording is not supported."
             );
 
             return;
@@ -728,17 +1028,21 @@ record.addEventListener(
 
 
         const stream=
-            renderer.domElement.captureStream(60);
+            renderer.domElement
+            .captureStream(60);
 
 
         let mimeType=
             "video/webm;codecs=vp9";
 
 
-        if(!MediaRecorder.isTypeSupported(mimeType)){
+        if(
+            !MediaRecorder.isTypeSupported(
+                mimeType
+            )
+        ){
 
-            mimeType=
-                "video/webm";
+            mimeType="video/webm";
 
         }
 
@@ -751,12 +1055,12 @@ record.addEventListener(
 
 
         mediaRecorder.ondataavailable=
-            function(event){
+            function(e){
 
-                if(event.data.size>0){
+                if(e.data.size>0){
 
                     recordedChunks.push(
-                        event.data
+                        e.data
                     );
 
                 }
@@ -775,17 +1079,21 @@ record.addEventListener(
 
 
                 const url=
-                    URL.createObjectURL(blob);
+                    URL.createObjectURL(
+                        blob
+                    );
 
 
                 const a=
-                    document.createElement("a");
+                    document.createElement(
+                        "a"
+                    );
 
 
                 a.href=url;
 
                 a.download=
-                    "OrbitForge_v0.7.webm";
+                    "OrbitForge_v0.8.webm";
 
 
                 document.body.appendChild(a);
@@ -801,12 +1109,6 @@ record.addEventListener(
                 record.textContent=
                     "🎥 RECORD VIDEO";
 
-
-                status.innerHTML=
-                    "Status: <b>VIDEO READY</b><br>"+
-                    "OrbitForge v0.7<br>"+
-                    "Recording saved";
-
             };
 
 
@@ -815,7 +1117,6 @@ record.addEventListener(
 
         running=true;
 
-
         start.textContent=
             "⏸ PAUSE";
 
@@ -823,17 +1124,9 @@ record.addEventListener(
         record.textContent=
             "⏹ STOP RECORDING";
 
-
-        status.innerHTML=
-            "Status: <b>RECORDING</b><br>"+
-            "OrbitForge v0.7<br>"+
-            "Capturing 3D simulation...";
-
     }
 );
 
-
-updateValues();
 
 init();
 
