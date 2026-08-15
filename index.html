@@ -1,9 +1,9 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OrbitForge v0.4</title>
+<title>OrbitForge v0.5</title>
 
 <style>
 html,body{
@@ -11,9 +11,15 @@ html,body{
   width:100%;
   height:100%;
   overflow:hidden;
-  background:#02050b;
+  background:#000;
   color:white;
   font-family:system-ui,sans-serif;
+}
+
+canvas{
+  display:block;
+  width:100%;
+  height:100%;
 }
 
 #ui{
@@ -25,9 +31,10 @@ html,body{
   max-width:390px;
   padding:15px;
   box-sizing:border-box;
-  background:#071021ee;
+  background:rgba(7,16,33,.9);
   border:1px solid #38507c;
   border-radius:18px;
+  backdrop-filter:blur(8px);
 }
 
 h1{
@@ -50,6 +57,11 @@ button{
   background:#315fcb;
   color:white;
   font-size:16px;
+  cursor:pointer;
+}
+
+button:active{
+  transform:scale(.98);
 }
 
 #status{
@@ -58,6 +70,7 @@ button{
   border-radius:10px;
   background:#091126;
   border:1px solid #22345b;
+  font-size:14px;
 }
 </style>
 </head>
@@ -69,11 +82,10 @@ button{
 <h1>ORBITFORGE</h1>
 
 <div class="sub">
-Planetary Simulation Laboratory · v0.4 TEST
+Planetary Simulation Laboratory · v0.5 TEST
 </div>
 
 <button id="start">▶ START</button>
-
 <button id="reset">↻ RESET</button>
 
 <div id="status">
@@ -84,64 +96,264 @@ Simulation: PAUSED
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
 <script>
 
-let running = false;
-let orbit = 0;
+let scene;
+let camera;
+let renderer;
+let planet;
+let orbitLine;
+let running=false;
+let angle=0;
 
-const start = document.getElementById("start");
-const reset = document.getElementById("reset");
-const status = document.getElementById("status");
+const start=document.getElementById("start");
+const reset=document.getElementById("reset");
+const status=document.getElementById("status");
 
-start.addEventListener("click", function(){
+function init(){
 
-    running = !running;
+    scene=new THREE.Scene();
 
-    if(running){
+    scene.background=new THREE.Color(0x000005);
 
-        start.textContent = "⏸ PAUSE";
+    camera=new THREE.PerspectiveCamera(
+        60,
+        window.innerWidth/window.innerHeight,
+        0.1,
+        1000
+    );
 
-        status.innerHTML =
-        "Status: <b>RUNNING</b><br>" +
-        "Planet X: 5 AU<br>" +
-        "Simulation: ACTIVE";
+    camera.position.set(0,12,22);
 
-    }else{
+    renderer=new THREE.WebGLRenderer({
+        antialias:true,
+        preserveDrawingBuffer:true
+    });
 
-        start.textContent = "▶ START";
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 
-        status.innerHTML =
-        "Status: <b>PAUSED</b><br>" +
-        "Planet X: 5 AU<br>" +
-        "Simulation: PAUSED";
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+
+    document.body.appendChild(renderer.domElement);
+
+    // STAR
+
+    const starGeometry=new THREE.SphereGeometry(2,48,48);
+
+    const starMaterial=new THREE.MeshBasicMaterial({
+        color:0xffcc33
+    });
+
+    const star=new THREE.Mesh(
+        starGeometry,
+        starMaterial
+    );
+
+    scene.add(star);
+
+    // STAR LIGHT
+
+    const light=new THREE.PointLight(
+        0xffffff,
+        3,
+        100
+    );
+
+    scene.add(light);
+
+    // PLANET
+
+    const planetGeometry=new THREE.SphereGeometry(
+        0.65,
+        32,
+        32
+    );
+
+    const planetMaterial=new THREE.MeshStandardMaterial({
+        color:0x3388ff,
+        roughness:.7
+    });
+
+    planet=new THREE.Mesh(
+        planetGeometry,
+        planetMaterial
+    );
+
+    scene.add(planet);
+
+    // ORBIT
+
+    const points=[];
+
+    const radius=8;
+
+    for(let i=0;i<=128;i++){
+
+        const a=(i/128)*Math.PI*2;
+
+        points.push(
+            new THREE.Vector3(
+                Math.cos(a)*radius,
+                0,
+                Math.sin(a)*radius
+            )
+        );
 
     }
 
-});
+    const orbitGeometry=
+        new THREE.BufferGeometry().setFromPoints(points);
 
-reset.addEventListener("click", function(){
+    const orbitMaterial=
+        new THREE.LineBasicMaterial({
+            color:0x3366ff
+        });
 
-    running = false;
-    orbit = 0;
+    orbitLine=new THREE.LineLoop(
+        orbitGeometry,
+        orbitMaterial
+    );
 
-    start.textContent = "▶ START";
+    scene.add(orbitLine);
 
-    status.innerHTML =
-    "Status: <b>READY</b><br>" +
-    "Planet X: 5 AU<br>" +
-    "Simulation: RESET";
+    // STAR FIELD
 
-});
+    const starPositions=[];
 
-setInterval(function(){
+    for(let i=0;i<1500;i++){
 
-    if(running){
-
-        orbit += 0.01;
+        starPositions.push(
+            (Math.random()-.5)*200,
+            (Math.random()-.5)*200,
+            (Math.random()-.5)*200
+        );
 
     }
 
-},50);
+    const starsGeometry=
+        new THREE.BufferGeometry();
+
+    starsGeometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(
+            starPositions,
+            3
+        )
+    );
+
+    const starsMaterial=
+        new THREE.PointsMaterial({
+            color:0xffffff,
+            size:.15
+        });
+
+    const stars=
+        new THREE.Points(
+            starsGeometry,
+            starsMaterial
+        );
+
+    scene.add(stars);
+
+    window.addEventListener(
+        "resize",
+        resize
+    );
+
+    animate();
+}
+
+function animate(){
+
+    requestAnimationFrame(animate);
+
+    if(running){
+
+        angle+=0.008;
+
+    }
+
+    const radius=8;
+
+    planet.position.x=
+        Math.cos(angle)*radius;
+
+    planet.position.z=
+        Math.sin(angle)*radius;
+
+    planet.rotation.y+=0.02;
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+function resize(){
+
+    camera.aspect=
+        window.innerWidth/window.innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+}
+
+start.addEventListener(
+    "click",
+    function(){
+
+        running=!running;
+
+        if(running){
+
+            start.textContent="⏸ PAUSE";
+
+            status.innerHTML=
+                "Status: <b>RUNNING</b><br>"+
+                "Planet X: 5 AU<br>"+
+                "Simulation: ACTIVE";
+
+        }else{
+
+            start.textContent="▶ START";
+
+            status.innerHTML=
+                "Status: <b>PAUSED</b><br>"+
+                "Planet X: 5 AU<br>"+
+                "Simulation: PAUSED";
+
+        }
+
+    }
+);
+
+reset.addEventListener(
+    "click",
+    function(){
+
+        running=false;
+        angle=0;
+
+        start.textContent="▶ START";
+
+        status.innerHTML=
+            "Status: <b>READY</b><br>"+
+            "Planet X: 5 AU<br>"+
+            "Simulation: RESET";
+
+    }
+);
+
+init();
 
 </script>
 
