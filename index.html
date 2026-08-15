@@ -1,57 +1,517 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OrbitForge v0.2</title>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OrbitForge v0.3</title>
+
 <style>
-html,body{margin:0;height:100%;overflow:hidden;background:#02050b;color:#eef;font-family:system-ui,sans-serif}
-#ui{position:fixed;z-index:10;pointer-events:auto;left:12px;top:12px;width:min(390px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;padding:14px;background:#071021e8;border:1px solid #38507c;border-radius:18px;box-sizing:border-box;backdrop-filter:blur(8px)}
-h1{margin:0;letter-spacing:3px}.sub{color:#9daaca;font-size:12px;margin:3px 0 12px}
-.row{display:flex;gap:8px}.row button{flex:1}button{border:1px solid #42577f;background:#111a31;color:white;border-radius:11px;padding:11px;font-size:14px}button.primary{background:#315fcb}
-label{display:block;color:#aab5ce;font-size:12px;margin-top:10px}label b{float:right;color:white}input{width:100%;accent-color:#3d72e6}
-#stats{margin-top:12px;padding:10px;border-radius:12px;background:#091126;border:1px solid #22345b;font-size:12px;line-height:1.65}
-#hint{position:fixed;right:10px;bottom:10px;background:#071021c9;border:1px solid #33456f;border-radius:10px;padding:8px;color:#9daaca;font-size:11px}
-</style></head><body>
-<div id="ui"><h1>ORBITFORGE</h1><div class="sub">3D Newtonian planetary laboratory · WEB v0.2</div>
-<div class="row"><button id="start" class="primary">▶ START</button><button id="reset">↻ RESET</button></div>
-<div class="row" style="margin-top:8px"><button id="preset">☀️ 300 R☉ + 5 AU</button><button id="focus">🎯 FOCUS X</button></div>
-<label>Simulation speed <b id="speedV"></b></label><input id="speed" type="range" min="1" max="1000" value="100">
-<label>Planet X orbit <b id="orbitV"></b></label><input id="orbit" type="range" min=".5" max="20" step=".1" value="5">
-<label>Star radius <b id="radiusV"></b></label><input id="radius" type="range" min="1" max="300" value="300">
-<label>Star mass <b id="massV"></b></label><input id="mass" type="range" min=".1" max="10" step=".1" value="1">
-<label>Star temperature <b id="tempV"></b></label><input id="temp" type="range" min="2500" max="10000" step="50" value="5778">
-<div id="stats"></div></div><div id="hint">Drag = rotate · pinch/scroll = zoom · 2-finger drag = pan</div>
+html,body{
+ margin:0;height:100%;overflow:hidden;
+ background:#02050b;color:#eef;
+ font-family:system-ui,sans-serif
+}
+#ui{
+ position:fixed;z-index:10;pointer-events:auto;
+ left:12px;top:12px;width:min(390px,calc(100% - 24px));
+ max-height:calc(100% - 24px);overflow:auto;
+ padding:14px;background:#071021ee;
+ border:1px solid #38507c;border-radius:18px;
+ box-sizing:border-box;backdrop-filter:blur(8px)
+}
+h1{margin:0;letter-spacing:3px}
+.sub{color:#9daaca;font-size:12px;margin:3px 0 12px}
+.row{display:flex;gap:8px}
+.row button{flex:1}
+button{
+ border:1px solid #42577f;background:#111a31;color:white;
+ border-radius:11px;padding:11px;font-size:14px;
+ cursor:pointer;touch-action:manipulation
+}
+button.primary{background:#315fcb}
+label{display:block;color:#aab5ce;font-size:12px;margin-top:10px}
+label b{float:right;color:white}
+input{width:100%;accent-color:#3d72e6;touch-action:manipulation}
+#stats{
+ margin-top:12px;padding:10px;border-radius:12px;
+ background:#091126;border:1px solid #22345b;
+ font-size:12px;line-height:1.65
+}
+#error{
+ display:none;margin-top:10px;padding:10px;
+ border-radius:10px;background:#35131a;
+ border:1px solid #8b3345;color:#ffb8c4;font-size:12px
+}
+#hint{
+ position:fixed;right:10px;bottom:10px;
+ background:#071021c9;border:1px solid #33456f;
+ border-radius:10px;padding:8px;color:#9daaca;font-size:11px
+}
+canvas{display:block}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+
+<h1>ORBITFORGE</h1>
+<div class="sub">3D Newtonian planetary laboratory · WEB v0.3</div>
+
+<div class="row">
+<button id="start" class="primary">▶ START</button>
+<button id="reset">↻ RESET</button>
+</div>
+
+<div class="row" style="margin-top:8px">
+<button id="preset">☀️ 300 R☉ + 5 AU</button>
+<button id="focus">🎯 FOCUS X</button>
+</div>
+
+<label>
+Simulation speed <b id="speedV"></b>
+</label>
+<input id="speed" type="range" min="1" max="1000" value="100">
+
+<label>
+Planet X orbit <b id="orbitV"></b>
+</label>
+<input id="orbit" type="range" min=".5" max="20" step=".1" value="5">
+
+<label>
+Star radius <b id="radiusV"></b>
+</label>
+<input id="radius" type="range" min="1" max="300" value="300">
+
+<label>
+Star mass <b id="massV"></b>
+</label>
+<input id="mass" type="range" min=".1" max="10" step=".1" value="1">
+
+<label>
+Star temperature <b id="tempV"></b>
+</label>
+<input id="temp" type="range" min="2500" max="10000" step="50" value="5778">
+
+<div id="stats"></div>
+<div id="error"></div>
+
+</div>
+
+<div id="hint">
+Drag = rotate · pinch/scroll = zoom · 2-finger drag = pan
+</div>
+
+<!-- FIXED MODULE IMPORT -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  }
+}
+</script>
+
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
-const RSUN=.00465047;
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x02050b);
-const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.0001,5000);camera.position.set(0,4,9);
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);document.body.appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=.2;controls.maxDistance=1000;
-scene.add(new THREE.AmbientLight(0x334466,.7));
-const light=new THREE.PointLight(0xffffff,5,0,2);scene.add(light);
-scene.add(new THREE.GridHelper(60,60,0x1b2946,0x0b1324));
-const star=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshBasicMaterial({color:0xffd45c}));scene.add(star);
-const glow=new THREE.Mesh(new THREE.SphereGeometry(1.08,32,24),new THREE.MeshBasicMaterial({color:0xffa72b,transparent:true,opacity:.16,side:THREE.BackSide}));scene.add(glow);
-const planet=new THREE.Mesh(new THREE.SphereGeometry(.045,32,20),new THREE.MeshStandardMaterial({color:0x4b8cff,roughness:.9}));scene.add(planet);
-planet.add(new THREE.Mesh(new THREE.SphereGeometry(.052,32,20),new THREE.MeshBasicMaterial({color:0x72a8ff,transparent:true,opacity:.18,side:THREE.BackSide})));
-let orbitRing,hz1,hz2;
-function ring(r,c,o){let m=new THREE.Mesh(new THREE.RingGeometry(r-.004,r+.004,256),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;return m}
-let running=false,t=0,last=performance.now(),a=5,mass=1,rad=300,temp=5778;
-const q=id=>document.getElementById(id), ids=['speed','orbit','radius','mass','temp'];
-function lum(){return rad*rad*Math.pow(temp/5778,4)}
-function rebuild(){[orbitRing,hz1,hz2].forEach(x=>x&&scene.remove(x));orbitRing=ring(a,0x4d83ff,.45);scene.add(orbitRing);let L=lum(),i=Math.min(40,.95*Math.sqrt(L)),o=Math.min(40,1.67*Math.sqrt(L));hz1=ring(i,0x36d46a,.28);hz2=ring(o,0x36d46a,.28);scene.add(hz1,hz2);let v=Math.min(.75,Math.max(.025,rad*RSUN));star.scale.setScalar(v);glow.scale.setScalar(v*1.12);light.intensity=5*Math.min(3,Math.sqrt(mass))}
-function update(){a=+q('orbit').value;rad=+q('radius').value;mass=+q('mass').value;temp=+q('temp').value;
-q('speedV').textContent=q('speed').value+'×';q('orbitV').textContent=a.toFixed(1)+' AU';q('radiusV').textContent=rad+' R☉';q('massV').textContent=mass.toFixed(1)+' M☉';q('tempV').textContent=temp+' K';
-rebuild();stats()}
-function stats(){let L=lum(),P=Math.sqrt(a*a*a/mass),v=29.784*Math.sqrt(mass/a),h1=.95*Math.sqrt(L),h2=1.67*Math.sqrt(L),sr=rad*RSUN;
-q('stats').innerHTML='<b>LIVE SYSTEM</b><br>Distance: '+a.toFixed(2)+' AU · '+Math.round(a*149597870.7).toLocaleString()+' km<br>Orbital period: '+P.toFixed(2)+' Earth years<br>Orbital speed: '+v.toFixed(2)+' km/s<br>Star luminosity: '+L.toExponential(2)+' L☉<br>Approx. HZ: '+h1.toFixed(1)+'–'+h2.toFixed(1)+' AU<br>Star radius: '+sr.toFixed(2)+' AU'+(a<=sr?' ⚠ ORBIT INSIDE STAR':'')}
-function pos(x){planet.position.set(a*Math.cos(x),0,a*Math.sin(x))}
-q('start').onclick=()=>{running=!running;q('start').textContent=running?'⏸ PAUSE':'▶ START'};
-q('reset').onclick=()=>{running=false;t=0;q('start').textContent='▶ START';update();pos(0)};
-q('preset').onclick=()=>{q('speed').value=100;q('orbit').value=5;q('radius').value=300;q('mass').value=1;q('temp').value=5778;update();pos(0)};
-q('focus').onclick=()=>{controls.target.copy(planet.position);camera.position.set(planet.position.x+2,1.2,planet.position.z+2)};
-ids.forEach(id=>q(id).oninput=update);
-function loop(now){requestAnimationFrame(loop);let dt=(now-last)/1000;last=now;if(running){let days=dt*+q('speed').value,period=Math.sqrt(a*a*a/mass)*365.256;t+=(days/period)*Math.PI*2;pos(t)}controls.update();renderer.render(scene,camera)}
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
-update();pos(0);loop(performance.now());
-</script></body></html>
+
+import * as THREE from "three";
+
+import {
+ OrbitControls
+} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
+
+const RSUN = 0.00465047;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x02050b);
+
+const camera = new THREE.PerspectiveCamera(
+ 55,
+ innerWidth / innerHeight,
+ 0.0001,
+ 5000
+);
+
+camera.position.set(0,4,9);
+
+const renderer = new THREE.WebGLRenderer({
+ antialias:true
+});
+
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(
+ camera,
+ renderer.domElement
+);
+
+controls.enableDamping = true;
+controls.minDistance = .2;
+controls.maxDistance = 1000;
+
+scene.add(
+ new THREE.AmbientLight(0x334466,.7)
+);
+
+const light = new THREE.PointLight(
+ 0xffffff,5,0,2
+);
+
+scene.add(light);
+
+scene.add(
+ new THREE.GridHelper(
+ 60,60,0x1b2946,0x0b1324
+ )
+);
+
+const star = new THREE.Mesh(
+ new THREE.SphereGeometry(1,48,32),
+ new THREE.MeshBasicMaterial({
+  color:0xffd45c
+ })
+);
+
+scene.add(star);
+
+const glow = new THREE.Mesh(
+ new THREE.SphereGeometry(1.08,32,24),
+ new THREE.MeshBasicMaterial({
+  color:0xffa72b,
+  transparent:true,
+  opacity:.16,
+  side:THREE.BackSide
+ })
+);
+
+scene.add(glow);
+
+const planet = new THREE.Mesh(
+ new THREE.SphereGeometry(.045,32,20),
+ new THREE.MeshStandardMaterial({
+  color:0x4b8cff,
+  roughness:.9
+ })
+);
+
+scene.add(planet);
+
+let orbitRing = null;
+let hz1 = null;
+let hz2 = null;
+
+function ring(r,c,o){
+
+ let m = new THREE.Mesh(
+  new THREE.RingGeometry(
+   Math.max(.001,r-.004),
+   r+.004,
+   256
+  ),
+  new THREE.MeshBasicMaterial({
+   color:c,
+   transparent:true,
+   opacity:o,
+   side:THREE.DoubleSide
+  })
+ );
+
+ m.rotation.x = -Math.PI/2;
+
+ return m;
+}
+
+let running = false;
+let t = 0;
+let last = performance.now();
+
+let a = 5;
+let mass = 1;
+let rad = 300;
+let temp = 5778;
+
+const q = id => document.getElementById(id);
+
+function luminosity(){
+
+ return rad * rad *
+ Math.pow(temp / 5778,4);
+
+}
+
+function rebuild(){
+
+ if(orbitRing) scene.remove(orbitRing);
+ if(hz1) scene.remove(hz1);
+ if(hz2) scene.remove(hz2);
+
+ orbitRing = ring(a,0x4d83ff,.45);
+ scene.add(orbitRing);
+
+ const L = luminosity();
+
+ const inner = Math.min(
+ 40,
+ .95 * Math.sqrt(L)
+ );
+
+ const outer = Math.min(
+ 40,
+ 1.67 * Math.sqrt(L)
+ );
+
+ hz1 = ring(inner,0x36d46a,.28);
+ hz2 = ring(outer,0x36d46a,.28);
+
+ scene.add(hz1);
+ scene.add(hz2);
+
+ const starSize = Math.min(
+ .75,
+ Math.max(.025,rad * RSUN)
+ );
+
+ star.scale.setScalar(starSize);
+ glow.scale.setScalar(starSize * 1.12);
+
+ light.intensity =
+ 5 * Math.min(3,Math.sqrt(mass));
+
+}
+
+function update(){
+
+ a = +q("orbit").value;
+ rad = +q("radius").value;
+ mass = +q("mass").value;
+ temp = +q("temp").value;
+
+ q("speedV").textContent =
+ q("speed").value + "×";
+
+ q("orbitV").textContent =
+ a.toFixed(1) + " AU";
+
+ q("radiusV").textContent =
+ rad + " R☉";
+
+ q("massV").textContent =
+ mass.toFixed(1) + " M☉";
+
+ q("tempV").textContent =
+ temp + " K";
+
+ rebuild();
+ stats();
+
+}
+
+function stats(){
+
+ const L = luminosity();
+
+ const period =
+ Math.sqrt(a*a*a/mass);
+
+ const velocity =
+ 29.784 * Math.sqrt(mass/a);
+
+ const h1 =
+ .95 * Math.sqrt(L);
+
+ const h2 =
+ 1.67 * Math.sqrt(L);
+
+ const sr =
+ rad * RSUN;
+
+ q("stats").innerHTML =
+ "<b>LIVE SYSTEM</b><br>" +
+ "Distance: " +
+ a.toFixed(2) +
+ " AU<br>" +
+
+ "Orbital period: " +
+ period.toFixed(2) +
+ " Earth years<br>" +
+
+ "Orbital speed: " +
+ velocity.toFixed(2) +
+ " km/s<br>" +
+
+ "Star luminosity: " +
+ L.toExponential(2) +
+ " L☉<br>" +
+
+ "Approx. HZ: " +
+ h1.toFixed(1) +
+ "–" +
+ h2.toFixed(1) +
+ " AU<br>" +
+
+ "Star radius: " +
+ sr.toFixed(2) +
+ " AU" +
+
+ (a <= sr ?
+ " ⚠ ORBIT INSIDE STAR" :
+ "");
+
+}
+
+function position(angle){
+
+ planet.position.set(
+  a * Math.cos(angle),
+  0,
+  a * Math.sin(angle)
+ );
+
+}
+
+q("start").onclick = function(){
+
+ running = !running;
+
+ q("start").textContent =
+ running ?
+ "⏸ PAUSE" :
+ "▶ START";
+
+};
+
+q("reset").onclick = function(){
+
+ running = false;
+ t = 0;
+
+ q("start").textContent =
+ "▶ START";
+
+ update();
+ position(0);
+
+};
+
+q("preset").onclick = function(){
+
+ q("speed").value = 100;
+ q("orbit").value = 5;
+ q("radius").value = 300;
+ q("mass").value = 1;
+ q("temp").value = 5778;
+
+ update();
+ position(0);
+
+};
+
+q("focus").onclick = function(){
+
+ controls.target.copy(
+  planet.position
+ );
+
+ camera.position.set(
+  planet.position.x + 2,
+  1.2,
+  planet.position.z + 2
+ );
+
+};
+
+[
+ "speed",
+ "orbit",
+ "radius",
+ "mass",
+ "temp"
+].forEach(id => {
+
+ q(id).addEventListener(
+  "input",
+  update
+ );
+
+});
+
+function animate(now){
+
+ requestAnimationFrame(animate);
+
+ const dt =
+ (now-last)/1000;
+
+ last = now;
+
+ if(running){
+
+  const speed =
+  +q("speed").value;
+
+  const days =
+  dt * speed;
+
+  const period =
+  Math.sqrt(a*a*a/mass) *
+  365.256;
+
+  t +=
+  (days/period) *
+  Math.PI * 2;
+
+  position(t);
+
+ }
+
+ controls.update();
+
+ renderer.render(
+  scene,
+  camera
+ );
+
+}
+
+addEventListener(
+ "resize",
+ function(){
+
+  camera.aspect =
+  innerWidth/innerHeight;
+
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(
+   innerWidth,
+   innerHeight
+  );
+
+ }
+);
+
+try{
+
+ update();
+ position(0);
+ animate(performance.now());
+
+}catch(error){
+
+ q("error").style.display =
+ "block";
+
+ q("error").textContent =
+ "OrbitForge error: " +
+ error.message;
+
+ console.error(error);
+
+}
+
+</script>
+
+</body>
+</html>
