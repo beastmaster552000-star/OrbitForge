@@ -87,8 +87,9 @@ Planetary Simulation Laboratory · v0.5 TEST
 
 <button id="start">▶ START</button>
 <button id="reset">↻ RESET</button>
-
+<button id="record">🎥 RECORD VIDEO</button>
 <div id="status">
+  
 Status: READY<br>
 Planet X: 5 AU<br>
 Simulation: PAUSED
@@ -110,6 +111,10 @@ let angle=0;
 
 const start=document.getElementById("start");
 const reset=document.getElementById("reset");
+const record=document.getElementById("record");
+
+let mediaRecorder=null;
+let recordedChunks=[];
 const status=document.getElementById("status");
 
 function init(){
@@ -352,7 +357,74 @@ reset.addEventListener(
 
     }
 );
+record.addEventListener("click", function(){
 
+    if(mediaRecorder && mediaRecorder.state === "recording"){
+        mediaRecorder.stop();
+        return;
+    }
+
+    recordedChunks=[];
+
+    const stream=renderer.domElement.captureStream(60);
+
+    mediaRecorder=new MediaRecorder(stream,{
+        mimeType:"video/webm;codecs=vp9"
+    });
+
+    mediaRecorder.ondataavailable=function(event){
+
+        if(event.data.size>0){
+            recordedChunks.push(event.data);
+        }
+
+    };
+
+    mediaRecorder.onstop=function(){
+
+        const blob=new Blob(
+            recordedChunks,
+            {type:"video/webm"}
+        );
+
+        const url=URL.createObjectURL(blob);
+
+        const a=document.createElement("a");
+
+        a.href=url;
+        a.download="OrbitForge_v0.6.webm";
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+        URL.revokeObjectURL(url);
+
+        record.textContent="🎥 RECORD VIDEO";
+
+        status.innerHTML=
+            "Status: <b>VIDEO READY</b><br>"+
+            "OrbitForge v0.6<br>"+
+            "Recording saved";
+
+    };
+
+    mediaRecorder.start();
+
+    running=true;
+
+    start.textContent="⏸ PAUSE";
+
+    record.textContent="⏹ STOP RECORDING";
+
+    status.innerHTML=
+        "Status: <b>RECORDING</b><br>"+
+        "OrbitForge v0.6<br>"+
+        "Capturing 3D simulation...";
+
+});
 init();
 
 </script>
