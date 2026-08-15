@@ -72,6 +72,23 @@ button:active{
   border:1px solid #22345b;
   font-size:14px;
 }
+  #controls{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid #22345b;
+}
+
+#controls label{
+  display:block;
+  margin-top:10px;
+  font-size:13px;
+  color:#c8d2e8;
+}
+
+#controls input{
+  width:100%;
+  margin-top:5px;
+}
 </style>
 </head>
 
@@ -89,6 +106,48 @@ Planetary Simulation Laboratory · v0.5 TEST
 <button id="reset">↻ RESET</button>
 <button id="record">🎥 RECORD VIDEO</button>
 <div id="status">
+<div id="controls">
+
+<label>
+Simulation Speed:
+<span id="speedValue">1×</span>
+</label>
+
+<input
+  id="speed"
+  type="range"
+  min="0.1"
+  max="5"
+  step="0.1"
+  value="1">
+
+<label>
+Camera Distance:
+<span id="cameraValue">24</span>
+</label>
+
+<input
+  id="cameraDistance"
+  type="range"
+  min="12"
+  max="50"
+  step="1"
+  value="24">
+
+<label>
+Planet Size:
+<span id="planetValue">1×</span>
+</label>
+
+<input
+  id="planetSize"
+  type="range"
+  min="0.5"
+  max="3"
+  step="0.1"
+  value="1">
+
+</div>
   
 Status: READY<br>
 Planet X: 5 AU<br>
@@ -112,6 +171,14 @@ let angle=0;
 const start=document.getElementById("start");
 const reset=document.getElementById("reset");
 const record=document.getElementById("record");
+const speedControl=document.getElementById("speed");
+const speedValue=document.getElementById("speedValue");
+
+const cameraDistance=document.getElementById("cameraDistance");
+const cameraValue=document.getElementById("cameraValue");
+
+const planetSize=document.getElementById("planetSize");
+const planetValue=document.getElementById("planetValue"); 
 
 let mediaRecorder=null;
 let recordedChunks=[];
@@ -271,7 +338,13 @@ function init(){
         resize
     );
 
-    animate();
+    animate(camera.position.set(
+    0,
+    Number(cameraDistance.value)*0.58,
+    Number(cameraDistance.value)
+);
+
+camera.lookAt(0,0,0); );
 }
 
 function animate(){
@@ -280,7 +353,7 @@ function animate(){
 
     if(running){
 
-        angle+=0.008;
+        angle+=0.008*Number(speedControl.value);
 
     }
 
@@ -293,7 +366,14 @@ function animate(){
         Math.sin(angle)*radius;
 
     planet.rotation.y+=0.02;
+  
+    const size=Number(planetSize.value);
 
+planet.scale.set(
+    size,
+    size,
+    size
+);
     renderer.render(
         scene,
         camera
